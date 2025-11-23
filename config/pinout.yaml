@@ -1,0 +1,71 @@
+stm32h743ZIT6:
+  uart4:
+    tx:  PA0
+    rx:  PA1
+    cts: PB0
+    rts: PB14
+
+  uart5:
+    tx: PB13
+    rx: PB12
+
+  spi1:
+    sck:  PA5
+    miso: PG9
+    mosi: PA7
+
+  spi2:
+    sck:  PB10
+    miso: PC2_C
+    mosi: PC1
+
+  i2c1:
+    sda: PB7
+    scl: PB8
+
+  i2c2:
+    sda: PF0
+    scl: PF1
+
+  fdcan1:
+    rx: PD0
+    tx: PD1
+
+  fdcan2:
+    rx: PB5
+    tx: PB6
+
+  adc1:
+    in2: PF11   # ADC1_INP2
+    in3: PA6    # ADCx_INP3
+
+  tim4:
+    ch1: PD12   # S_TIM4_CH1
+    ch2: PD13   # S_TIM4_CH2
+    ch3: PD14   # S_TIM4_CH3
+
+  sdmmc1:
+    d0:  PC8
+    d1:  PC9
+    d2:  PC10
+    d3:  PC11
+    cmd: PD2
+    ck:  PC12
+
+  usb_otg_fs:
+    dm: PA11
+    dp: PA12
+
+  debug:
+    swdio: "PA13 (JTMS/SWDIO)"
+    swclk: "PA14 (JTCK/SWCLK)"
+    swo:   "PB3 (JTDO/TRACESWO)"
+
+  hse:
+    osc_in:  "PH0-OSC_IN (PH0)"
+    osc_out: "PH1-OSC_OUT (PH1)"
+
+  system:
+    systick:    VP_SYS_VS_Systick
+    memorymap:  VP_MEMORYMAP_VS_MEMORYMAP
+    tim4_clock: VP_TIM4_VS_ClockSourceINT
