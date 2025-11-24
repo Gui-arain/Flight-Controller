@@ -1,12 +1,12 @@
 # Power Architecture
 
 ## Purpose
-Provide clean, reliable power to STM32H743, IMUs, GPS, and peripherals.
+Provide clean, reliable power to STM32H743, IMU, MAG, BAR, and external peripherals.
 
 ## Rails
+- +5V : direct output of the power connector
 - 5V_SYS (post-MUX): up to 2.5 A
 - 3V3_DIG (buck): 2 A
-- 3V3_ANA (LDO): 300 mA
 
 ## Regulators
 - Buck: TPS54202DDC
