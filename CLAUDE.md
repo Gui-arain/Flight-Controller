@@ -133,15 +133,26 @@ This ensures a single source of truth: the user-controlled hardware design files
 
 ## Documentation Philosophy
 
+### Core Principles
 From `docs/README.md`:
 - **Atomic documentation**: Each subsystem documented independently
 - **YAML configs**: All configurations in YAML format
 - **LLM-optimized**: Documentation structured for AI consumption
+- **Conciseness**: Keep documentation as concise as possible
+- **No duplication**: Use references and links instead of duplicating information across `/docs`
 
-When adding new subsystems:
-1. Create separate markdown files for each hardware block
+### Content Organization
+- **Design decisions**: All design rationale goes in `docs/hardware/design-decisions.md`
+- **Future development ideas**: All forward-looking plans go in `docs/future-developments.md`
+- **Component documentation**: Focus on implementation details, not feature catalogs
+  - Example: `buck-converter.md` should describe how the buck converter is implemented in the PCB design, not list all component features
+
+### Adding New Subsystems
+When documenting new hardware blocks:
+1. Create separate markdown files for each subsystem
 2. Store component specifications in YAML where possible
 3. Add datasheets to `resources/datasheets/` in the appropriate category
+4. Focus on implementation specifics rather than component feature lists
 
 ## Component Datasheets
 
