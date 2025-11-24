@@ -1,0 +1,921 @@
+# Power Architecture Configuration
+# Based on hardware design in: hardware/KiCad/FC_v1.0/FC-power-section.kicad_sch
+# Last updated: 2025-11-24
+
+# =============================================================================
+# PIXHAWK POWER MODULE COMPATIBILITY
+# =============================================================================
+# This flight controller is designed to be compatible with standard Pixhawk
+# power modules, providing drop-in compatibility with the established drone
+# ecosystem.
+
+pixhawk_compatibility:
+  standard: "Pixhawk Power Module Interface"
+  connector: "JST GH 6-pin (SM06B-GHS-TB)"
+  pin_rating: "1A per contact"
+
+  typical_modules:
+    - name: "Standard Pixhawk Power Module"
+      output_voltage: 5.0
+      output_current_range: "2.0-3.0A"
+      features:
+        - "Regulated 5V output from LiPo battery (2S-6S typical)"
+        - "Battery voltage sensing (voltage divider)"
+        - "Battery current sensing (hall effect or shunt)"
+        - "Overcurrent protection"
+        - "Input filtering and transient protection"
+        - "LED power indicators"
+
+  standard_pinout:
+    pin1: "VCC (+5V output)"
+    pin2: "VCC (+5V output, parallel with pin 1)"
+    pin3: "CURRENT (analog current sense, 0-3.3V)"
+    pin4: "VOLTAGE (analog voltage sense, 0-3.3V)"
+    pin5: "GND (ground return)"
+    pin6: "GND (ground return, parallel with pin 5)"
+    notes: "Dual power and ground pins allow 2A total current (1A per contact rating)"
+
+  advantages:
+    - "Industry-standard interface for drone/UAV applications"
+    - "Wide availability of compatible power modules from multiple vendors"
+    - "Integrated battery monitoring (no additional sensing circuit needed)"
+    - "Proven reliability in flight controller applications"
+    - "Built-in protection and filtering reduces onboard complexity"
+    - "Supports wide input voltage range (2S-6S LiPo) via external module"
+
+  design_rationale: |
+    Using the Pixhawk power module standard ensures compatibility with readily
+    available power distribution hardware and provides integrated battery monitoring.
+    The 2-3A output from typical modules is sufficient for the flight controller's
+    onboard systems (STM32H743, sensors, interfaces), with the dual power input
+    (external module + USB) providing flexible development and testing capability.
+
+    The JST GH connector is NOT a limitation - it's a deliberate design choice for
+    ecosystem compatibility. The power module handles all battery interfacing,
+    regulation, and protection, allowing the flight controller to focus on core
+    control algorithms.
+
+  current_budget_first_iteration:
+    power_module_output: "2.0-3.0A @ 5V (typical)"
+    onboard_consumption:
+      stm32h743: "~400mA @ 3.3V (active, all peripherals)"
+      icm42688p_imu: "~1mA @ 3.3V"
+      mmc5983ma_mag: "~3mA @ 3.3V"
+      barometer: "~5mA @ 3.3V (if included)"
+      sd_card: "~100mA @ 3.3V (write operations)"
+      can_transceivers: "~20mA @ 3.3V"
+      leds_misc: "~20mA @ 3.3V"
+      total_3v3: "~550mA @ 3.3V"
+
+      buck_converter_input: "~750mA @ 5V (to provide 550mA @ 3.3V, ~75% efficiency)"
+      usb_otg: "0mA (not used in normal operation)"
+      margin: "~1.25A remaining for future expansion"
+
+    external_peripherals_first_iteration:
+      gps_module: "~50-150mA @ 5V or 3.3V (direct connection to EXT_5V)"
+      telemetry_radio: "~100-500mA @ 5V (direct connection to EXT_5V)"
+      notes: |
+        Minimal external peripherals in first iteration for validation.
+        External peripherals connect DIRECTLY to EXT_5V (bypassing MUX) to:
+        - Avoid burdening the 2.5A MUX limit
+        - Access full power module capability (2-3A)
+        - Protect onboard systems from external faults
+        - Maintain clean 5V_SYS rail for flight controller core
+
+    total_estimated: "~1.0-1.5A from power module (comfortable margin)"
+    safety_margin: "25-50% headroom available"
+
+# =============================================================================
+# POWER INPUT SOURCES
+# =============================================================================
+power_inputs:
+  pixhawk_power_module:
+    name: "EXT_5V"
+    voltage: 5.0
+    typical_current: "2.0-3.0A"
+    connector: "J_PWR"
+    connector_type: "SM06B-GHS-TB (JST GH 6-pin)"
+
+    connection_scheme:
+      power_delivery:
+        pin1_pin2: "VCC (+5V, dual pins for 2A total capacity)"
+      ground_return:
+        pin5_pin6: "GND (dual pins for low resistance path)"
+      sensing:
+        pin3: "BAT_CURRENT (analog 0-3.3V, current sense from power module)"
+        pin4: "BAT_VOLTAGE (analog 0-3.3V, battery voltage sense from power module)"
+
+    onboard_protection:
+      current_limit_resistor: "R_ILIM = 250 ohm"
+      esd_protection: "D6 (TSD05DYFR) on VBUS line"
+
+    notes: |
+      Primary power input via standard Pixhawk power module.
+      Power module provides regulated 5V from LiPo battery (2S-6S) with integrated
+      voltage/current sensing and overcurrent protection.
+      This input has priority over USB via TPS2113A power MUX.
+
+  usb_fallback:
+    name: "VBUS"
+    voltage: 5.0
+    typical_current: "0.5-2.0A (USB port dependent)"
+    connector: "J_PWR (shared connector with power module)"
+    connector_type: "SM06B-GHS-TB"
+
+    esd_protection:
+      component: "D6"
+      part_number: "TSD05DYFR"
+
+    use_cases:
+      - "Development and firmware debugging without battery"
+      - "Bench testing and sensor calibration"
+      - "Configuration and ground station connection"
+
+    notes: |
+      Secondary power input for development/testing without battery.
+      Automatic power source selection via TPS2113A prioritizes external
+      power module over USB when both are connected (prevents USB overcurrent).
+      Limited current capability - not suitable for full flight operations.
+
+  battery_monitoring:
+    voltage_sense:
+      signal: "BAT_VOLTAGE"
+      source: "Pixhawk power module voltage divider (Pin 4)"
+      voltage_range: "0-3.3V analog (represents battery voltage)"
+      typical_scaling: "~0.5-0.6V per cell (module dependent)"
+      connection: "ADC input on STM32H743"
+      purpose: "Real-time battery voltage monitoring for low-voltage warnings"
+
+    current_sense:
+      signal: "BAT_CURRENT"
+      source: "Pixhawk power module current sensor (Pin 3)"
+      voltage_range: "0-3.3V analog (represents battery current)"
+      typical_scaling: "Module dependent (e.g., 18.0V/V, 36.6V/V)"
+      connection: "ADC input on STM32H743"
+      purpose: "Battery current monitoring for mAh consumed and power tracking"
+
+    calibration:
+      required: true
+      method: "Ground station calibration against known voltage/current"
+      storage: "Flash memory parameters"
+
+    notes: |
+      Battery monitoring is handled by the external Pixhawk power module,
+      which provides calibrated analog voltage and current signals.
+      No additional sensing circuitry required on flight controller.
+      Scaling factors are power module specific and must be calibrated.
+
+# =============================================================================
+# POWER MANAGEMENT ICs
+# =============================================================================
+power_management:
+  power_mux:
+    reference: "U2"
+    part_number: "TPS2113ADRBR"
+    manufacturer: "Texas Instruments"
+    function: "Ideal-Diode Power Multiplexer"
+    package: "DRB8"
+    datasheet: "https://www.ti.com/lit/gpn/tps2113a"
+
+    inputs:
+      - name: "IN1"
+        source: "EXT_5V (Pixhawk Power Module)"
+        priority: 1
+        notes: "Primary power source - highest priority"
+      - name: "IN2"
+        source: "VBUS (USB)"
+        priority: 2
+        notes: "Fallback power source for development"
+
+    output:
+      rail: "5V_SYS"
+      max_current: 2.5  # Amperes (IC rating)
+      typical_current: "1.0-1.5A (first iteration)"
+
+    configuration:
+      automatic_switching: true
+      priority_logic: "EXT_5V > USB"
+      reverse_current_blocking: true
+      voltage_drop: "~0.1-0.2V (ideal diode FET)"
+
+    status_output:
+      pin: "STAT (Pin 1)"
+      connection: "LED indicator via R5"
+      function: "Power source status indication"
+
+    support_components:
+      - ref: "R5"
+        value: "1.5k ohm"
+        function: "Status indicator pull-up"
+      - ref: "R6"
+        value: "4.3k ohm"
+        function: "Input source selection threshold"
+      - ref: "R7"
+        value: "820 ohm"
+        function: "Current limiting/sense"
+      - ref: "C41"
+        value: "1 uF"
+        function: "Input bypass capacitor"
+      - ref: "C42"
+        value: "100 nF"
+        function: "Input bypass capacitor"
+      - ref: "D2"
+        type: "PWR_LED"
+        function: "Power indicator LED"
+
+    design_notes: |
+      The power MUX ensures safe automatic switching between power module and USB,
+      preventing USB port overcurrent when external power is available.
+      This is critical for development workflows where USB connection is needed
+      for programming/debugging while system is powered by battery.
+
+  buck_converter:
+    reference: "U3"
+    part_number: "TPS62130RGTR"
+    manufacturer: "Texas Instruments"
+    function: "Synchronous Step-Down Buck Converter"
+    package: "RGT16 (QFN 16-pin)"
+    datasheet: "https://www.ti.com/lit/gpn/tps62130"
+
+    input:
+      rail: "5V_SYS"
+      voltage: 5.0
+      voltage_range: "3.0-17.0V (IC capability)"
+
+    output:
+      rail: "3V3_DIG"
+      voltage: 3.3
+      tolerance: "+/- 3%"
+      max_current: 2.0  # Amperes (IC rating)
+      typical_current: "0.6-1.0A (first iteration with margin)"
+      ripple: "<50mV p-p (typical with filtering)"
+
+    efficiency:
+      typical: "~75-85% at 0.5-2.0A load"
+      power_dissipation: "Minimal due to synchronous rectification"
+
+    switching_frequency:
+      configurable: true
+      typical: "~1MHz (FSW pin configuration)"
+      tradeoff: "Higher frequency = smaller inductor, higher switching loss"
+
+    key_pins:
+      switching:
+        - "Pin 1-3: SW (Switch outputs, connect to inductor)"
+      control:
+        - "Pin 4: PG (Power Good status output)"
+        - "Pin 5: FB (Feedback input for voltage regulation)"
+        - "Pin 13: EN (Enable control input)"
+        - "Pin 14: VOS (Output voltage sense)"
+      configuration:
+        - "Pin 7: FSW (Frequency selection)"
+        - "Pin 8: DEF (Default configuration)"
+        - "Pin 9: SS/TR (Soft start/Tracking)"
+      power:
+        - "Pin 10: AVIN (Auxiliary input for control circuits)"
+        - "Pin 11-12: PVIN (Primary power input, dual pins)"
+      ground:
+        - "Pin 6: AGND (Analog ground for control)"
+        - "Pin 15-16: PGND (Power ground for switching, dual pins)"
+        - "Pin 17: EPAD (Exposed pad for thermal management)"
+
+    support_components:
+      inductor:
+        ref: "L1"
+        value: "2.2 uH"
+        current_rating: ">2.5A"
+        dcr: "<50 mohm (for efficiency)"
+        function: "Energy storage element for buck converter"
+
+      input_capacitors:
+        - ref: "C24"
+          value: "100 nF"
+          type: "Ceramic X7R"
+          voltage: "10V+"
+          function: "High-frequency input bypass"
+
+      output_capacitors:
+        - ref: "C25"
+          value: "10 uF"
+          type: "Ceramic X7R or electrolytic"
+          voltage: "6.3V+"
+          function: "Bulk output capacitor"
+        - ref: "C26"
+          value: "100 nF"
+          type: "Ceramic X7R"
+          voltage: "6.3V+"
+          function: "High-frequency output bypass"
+        - ref: "C27"
+          value: "3.3 nF"
+          type: "Ceramic"
+          voltage: "6.3V+"
+          function: "Output filter for ripple reduction"
+        - ref: "C28"
+          value: "22 uF"
+          type: "Ceramic X7R or electrolytic"
+          voltage: "6.3V+"
+          function: "Additional bulk capacitance"
+
+      feedback_network:
+        - ref: "R4"
+          value: "100k ohm"
+          function: "Feedback divider upper resistor"
+        - ref: "R8"
+          value: "7.5k ohm"
+          function: "Output voltage setting resistor"
+        - ref: "R9"
+          value: "2.4k ohm"
+          function: "Feedback divider lower resistor"
+        - ref: "C18"
+          value: "100 nF"
+          function: "Feedback compensation capacitor"
+
+    design_notes: |
+      The TPS62130 provides efficient 3.3V generation for all digital systems.
+      Synchronous rectification minimizes heat generation, critical for compact
+      flight controller designs. Power Good output can be used for sequencing
+      or fault detection in future revisions.
+
+  # Note: Analog LDO for 3V3_ANA rail
+  analog_ldo:
+    reference: "TBD"
+    part_number: "TPS7A2033 (or similar low-noise LDO)"
+    status: "Not found in current FC-power-section.kicad_sch"
+    planned_implementation:
+      input: "5V_SYS or 3V3_DIG"
+      output: "3V3_ANA (300mA)"
+      purpose: "Ultra-clean power for IMU, magnetometer, and VDDA"
+      features: "Low noise, high PSRR, soft-start"
+    notes: |
+      Documentation mentions this LDO for 3V3_ANA rail generation.
+      May be present in other schematic sheets or planned for future revision.
+      Critical for high-performance sensor operation and ADC accuracy.
+
+# =============================================================================
+# POWER RAILS
+# =============================================================================
+power_rails:
+  # 5V System Rail
+  rail_5v_sys:
+    name: "5V_SYS"
+    voltage: 5.0
+    tolerance: "+/- 5%"
+    voltage_range: "4.75-5.25V"
+    max_current: 2.5  # Amperes (limited by TPS2113A)
+    typical_current: "1.0-1.5A (first iteration)"
+
+    source:
+      component: "U2"
+      part: "TPS2113ADRBR"
+
+    loads:
+      - description: "U3 buck converter input (primary load)"
+        current: "~750mA typical"
+      - description: "USB_OTG_FS (if used)"
+        current: "0mA (not used in first iteration)"
+      - description: "Future onboard 5V devices"
+        current: "~1.0A available margin"
+        notes: "Reserved for onboard systems only"
+
+    characteristics:
+      ripple: "<100mV p-p (depends on power module quality)"
+      transient_response: "Determined by power module and MUX"
+
+    notes: |
+      Post-MUX 5V rail with automatic source selection (power module > USB).
+      This rail is RESERVED FOR ONBOARD SYSTEMS ONLY (buck converter, USB PHY).
+
+      IMPORTANT: External 5V peripherals (GPS, telemetry, etc.) connect directly
+      to EXT_5V (before the MUX) to avoid burdening the 2.5A MUX limit and to
+      access the full power module capability. This architecture protects critical
+      onboard systems from external peripheral faults or overcurrent conditions.
+
+  # 3.3V Digital Rail
+  rail_3v3_dig:
+    name: "3V3_DIG"
+    voltage: 3.3
+    tolerance: "+/- 3%"
+    voltage_range: "3.20-3.40V"
+    max_current: 2.0  # Amperes (TPS62130 capability)
+    typical_current: "0.6-1.0A (first iteration with margin)"
+
+    source:
+      component: "U3"
+      part: "TPS62130RGTR"
+
+    loads:
+      - description: "STM32H743ZIT6 VDD pins (core logic)"
+        current: "~200-400mA (varies with activity)"
+        pins: "Multiple VDD pins"
+      - description: "STM32H743 VDDLDO (internal LDO input)"
+        current: "Included in core consumption"
+      - description: "Digital communication interfaces"
+        current: "~20-50mA"
+        interfaces: "UART, SPI, I2C, CAN transceivers"
+      - description: "SD card interface"
+        current: "~50-100mA (during writes)"
+      - description: "LEDs and indicators"
+        current: "~10-20mA"
+      - description: "Digital sensors (if powered from 3V3_DIG)"
+        current: "~10-20mA"
+      - description: "Future expansion margin"
+        current: "~1.0A available"
+
+    characteristics:
+      ripple: "<50mV p-p (well filtered)"
+      transient_response: "Fast (<10us for load steps)"
+      regulation: "Tight feedback control via TPS62130"
+
+    filtering:
+      bulk_capacitance: "32 uF total (C25 + C28)"
+      hf_bypass: "100 nF ceramic (C26)"
+      additional: "3.3 nF filter (C27)"
+
+    notes: |
+      Primary digital power rail for STM32H743 and digital peripherals.
+      Well-regulated with low ripple suitable for microcontroller operation.
+      Adequate margin for first iteration sensor suite and interfaces.
+
+  # 3.3V Analog Rail
+  rail_3v3_ana:
+    name: "3V3_ANA"
+    voltage: 3.3
+    tolerance: "+/- 1%"
+    voltage_range: "3.267-3.333V"
+    max_current: 0.3  # Amperes (300 mA, typical LDO rating)
+    typical_current: "0.02-0.05A (first iteration sensors)"
+
+    source:
+      component: "TBD"
+      part: "TPS7A2033 or equivalent low-noise LDO"
+      status: "Not confirmed in current schematic"
+
+    loads:
+      - description: "ICM-42688-P (Primary IMU)"
+        current: "~1mA typical"
+        voltage_requirement: "1.71-3.6V"
+      - description: "MMC5983MA (Magnetometer)"
+        current: "~3mA typical"
+        voltage_requirement: "1.62-3.6V"
+      - description: "Barometer (if included)"
+        current: "~5mA typical"
+        voltage_requirement: "1.8-3.6V typical"
+      - description: "STM32H743 VDDA (Analog supply)"
+        current: "~10mA typical"
+        voltage_requirement: "1.62-3.6V"
+      - description: "GPS module (via ferrite bead)"
+        current: "~50-150mA"
+        voltage_requirement: "3.3V"
+        notes: "May be on separate connector"
+      - description: "Margin for expansion"
+        current: "~100mA available"
+
+    characteristics:
+      noise: "<10uV RMS (for sensor accuracy)"
+      psrr: ">70dB @ 1kHz (rejects upstream noise)"
+      ripple: "<1mV p-p (critical for ADC reference)"
+      transient_response: "Slower than buck (LDO characteristic)"
+
+    filtering:
+      input_isolation: "Ferrite beads from 3V3_DIG or 5V_SYS"
+      decoupling: "Multiple ceramic capacitors per sensor"
+      bulk: "Low-ESR tantalum or ceramic"
+
+    notes: |
+      Clean analog power for sensors and STM32H743 VDDA pin.
+      LDO implementation (not buck) ensures ultra-low noise for IMU and magnetometer.
+      Critical for high-precision inertial measurements and ADC accuracy.
+      Implementation status unclear - may be in different schematic sheet.
+
+  # USB 3.3V Rail
+  rail_vdd33_usb:
+    name: "VDD33_USB"
+    voltage: 3.3
+    tolerance: "+/- 3%"
+    max_current: 0.1  # Amperes (USB PHY consumption)
+
+    source: "TBD (likely derived from 3V3_DIG with filtering)"
+
+    loads:
+      - description: "STM32H743 VDD33USB pin"
+        current: "~50mA typical (USB PHY)"
+
+    critical_notes: |
+      MANDATORY: VDD33_USB must be supplied with 3.3V even if USB is not actively used.
+      This is a hard requirement of the STM32H743 microcontroller for proper operation.
+      The USB PHY power domain must be active regardless of USB functionality usage.
+
+      Failure to power this rail will cause undefined behavior or prevent MCU startup.
+
+# =============================================================================
+# POWER DISTRIBUTION HIERARCHY
+# =============================================================================
+power_distribution:
+  hierarchy: |
+    Pixhawk Power Module (2-3A @ 5V from battery)
+        |
+        +-- EXT_5V (Pin 1-2 of J_PWR) ---+
+        |                                 |
+        |                                 +-- EXTERNAL 5V PERIPHERALS (DIRECT CONNECTION)
+        |                                 |   (GPS, telemetry, future peripherals)
+        |                                 |   Bypasses MUX for full power module capability
+        |                                 |
+        |                                 +-- TPS2113A (U2) Power MUX Input (IN1)
+        |                                          |
+        +-- GND (Pin 5-6 of J_PWR) ------+        |
+        |                                          |
+        +-- BAT_VOLTAGE (Pin 4) ---------+-- To STM32 ADC
+        |                                          |
+        +-- BAT_CURRENT (Pin 3) ---------+-- To STM32 ADC
+                                                   |
+                                                   v
+                                             TPS2113A (U2)
+                                             Power MUX
+                                             [Priority: EXT_5V > USB]
+                                                   |
+                                                   v
+                                             5V_SYS Rail (2.5A max)
+                                             (Reserved for ONBOARD systems)
+                                                   |
+                                                   +-- TPS62130 (U3)
+                                                   |   Buck Converter
+                                                   |        |
+                                                   |        v
+                                                   |   3V3_DIG Rail (2A max)
+                                                   |        |
+                                                   |        +-- STM32H743 VDD
+                                                   |        +-- Digital peripherals
+                                                   |        +-- Communication interfaces
+                                                   |        +-- SD card
+                                                   |        +-- (Input to analog LDO)
+                                                   |                |
+                                                   |                v
+                                                   |           3V3_ANA Rail (300mA max)
+                                                   |                |
+                                                   |                +-- ICM-42688-P (IMU)
+                                                   |                +-- MMC5983MA (MAG)
+                                                   |                +-- Barometer
+                                                   |                +-- STM32 VDDA
+                                                   |
+                                                   +-- VDD33_USB (via filter/regulator)
+
+    USB_VBUS (0.5-2A, development only)
+        |
+        +-- ESD Protection (D6: TSD05DYFR)
+        |
+        +-- TPS2113A (U2) IN2
+                |
+                (Lower priority, automatic switchover)
+
+  grounding:
+    strategy: "Star grounding with separate analog and digital ground planes"
+    implementation:
+      power_ground: "PGND (buck converter switching ground)"
+      analog_ground: "AGND (sensor and ADC reference ground)"
+      digital_ground: "GND (digital logic ground)"
+      chassis_ground: "Connected at single point (star point)"
+
+    best_practices:
+      - "Minimize ground loops between analog and digital sections"
+      - "Route high-current return paths directly to power ground"
+      - "Keep sensor grounds quiet (no switching currents)"
+      - "Use ground plane stitching vias for low impedance"
+      - "Ferrite beads or resistors between ground domains if needed"
+
+    notes: |
+      Proper grounding is critical for IMU/magnetometer noise performance.
+      Multiple ground symbols throughout schematic indicate separate ground planes.
+      All grounds should converge at or near power input connector for star topology.
+
+# =============================================================================
+# SPECIAL REQUIREMENTS
+# =============================================================================
+special_requirements:
+  usb_power:
+    requirement: "VDD33_USB must be supplied 3.3V at all times"
+    reason: "STM32H743 USB PHY power domain must be active for proper MCU operation"
+    criticality: "MANDATORY"
+    implementation: "Derived from 3V3_DIG with appropriate filtering"
+    current: "~50mA typical"
+
+  analog_power:
+    requirement: "Clean, low-noise 3.3V for precision sensors"
+    implementation: "Separate 3V3_ANA rail via LDO (not buck converter)"
+    target_noise: "<10uV RMS"
+    target_psrr: ">70dB @ 1kHz"
+    filtering: "Ferrite beads, decoupling capacitors, separate ground plane"
+
+    affected_components:
+      - "ICM-42688-P: Gyro noise 2.8 mdps/√Hz requires clean power"
+      - "MMC5983MA: 18-bit magnetometer needs stable reference"
+      - "STM32 VDDA: ADC accuracy depends on analog supply quality"
+
+    notes: |
+      Sensor selection (ICM-42688-P, MMC5983MA) was based on low noise characteristics.
+      Power supply noise can degrade sensor performance and negate sensor advantages.
+      GPS module receives 3.3V through ferrite bead for additional isolation.
+
+  power_sequencing:
+    preferred_sequence:
+      - step: 1
+        rail: "5V_SYS"
+        notes: "Power MUX output establishes first (TPS2113A)"
+        timing: "t=0"
+
+      - step: 2
+        rail: "3V3_DIG"
+        notes: "Buck converter output for digital logic"
+        timing: "t=~10ms (soft-start)"
+        dependency: "Requires 5V_SYS stable"
+
+      - step: 3
+        rail: "3V3_ANA"
+        notes: "Analog LDO output for clean sensor power"
+        timing: "t=~15ms (soft-start)"
+        dependency: "Requires 3V3_DIG or 5V_SYS stable"
+
+      - step: 4
+        rail: "VDD33_USB"
+        notes: "USB PHY power (if separate from 3V3_DIG)"
+        timing: "t=~15ms"
+        dependency: "Requires 3V3_DIG stable"
+
+    power_good_signals:
+      - "TPS62130 Pin 4 (PG): Indicates 3V3_DIG within regulation"
+      - "Can be used for MCU reset control or sequencing logic"
+
+    inrush_current:
+      total_capacitance: "~100uF (all rails combined)"
+      inrush_limiting: "Soft-start on TPS62130, power module current limit"
+      typical_inrush: "<2A peak (limited by power module)"
+
+  thermal_management:
+    critical_components:
+      - component: "U3 (TPS62130)"
+        power_dissipation: "~0.5-1W at full load"
+        thermal_solution: "Exposed pad to PCB, thermal vias to ground plane"
+        junction_temp_max: "125C"
+
+      - component: "U2 (TPS2113A)"
+        power_dissipation: "~0.2-0.5W (I²R in FETs)"
+        thermal_solution: "PCB copper pour for heat spreading"
+
+      - component: "L1 (Inductor)"
+        power_dissipation: "~0.1-0.3W (DCR losses)"
+        thermal_solution: "Airflow, adequate copper clearance"
+
+    pcb_considerations:
+      - "2oz copper or heavier on power planes"
+      - "Thermal vias under QFN packages"
+      - "Keep high-current traces short and wide"
+      - "Adequate spacing for airflow in enclosed designs"
+
+# =============================================================================
+# FIRST ITERATION DESIGN PHILOSOPHY
+# =============================================================================
+design_philosophy:
+  approach: "Iterative prototyping with proven standards"
+
+  goals:
+    - "Validate hardware architecture and power distribution"
+    - "Achieve stable sensor operation (IMU, magnetometer)"
+    - "Establish firmware development platform"
+    - "Demonstrate Pixhawk ecosystem compatibility"
+    - "Minimize first-iteration complexity and risk"
+
+  power_architecture_rationale:
+    pixhawk_compatibility:
+      decision: "Use JST GH connector and Pixhawk power module standard"
+      rationale: |
+        - Leverages existing ecosystem and available hardware
+        - Integrated battery monitoring reduces design complexity
+        - Proven reliability in flight controller applications
+        - Wide vendor availability for replacement/upgrade
+        - Community familiarity aids troubleshooting and support
+
+    external_peripheral_power:
+      decision: "External 5V peripherals connect directly to EXT_5V (bypass MUX)"
+      rationale: |
+        - Protects critical onboard systems from external peripheral faults
+        - Avoids burdening the 2.5A MUX current limit
+        - Provides access to full power module capability (2-3A)
+        - Isolates flight controller core power from variable external loads
+        - Prevents external peripheral overcurrent from affecting MCU/sensors
+        - Simple architecture: power module splits to (1) onboard via MUX, (2) external direct
+      implementation: "EXT_5V rail branches before MUX input for external connectors"
+      affected_peripherals: "GPS, telemetry radios, LED strips, future expansion"
+
+    dual_input_mux:
+      decision: "TPS2113A ideal-diode power multiplexer"
+      rationale: |
+        - Enables development without battery (USB power)
+        - Automatic priority selection prevents USB overcurrent
+        - Seamless switchover during development/testing
+        - Low voltage drop (0.1-0.2V) maintains efficiency
+        - Proven topology in commercial flight controllers
+
+    buck_converter:
+      decision: "TPS62130 synchronous buck (not linear regulator)"
+      rationale: |
+        - High efficiency (75-85%) reduces heat generation
+        - Supports 2A output for future expansion
+        - Compact solution (QFN package)
+        - Synchronous rectification minimizes power loss
+        - Well-characterized component with good availability
+
+    separate_analog_rail:
+      decision: "Dedicated 3V3_ANA LDO for sensors (planned)"
+      rationale: |
+        - Ultra-low noise critical for ICM-42688-P gyro performance
+        - Isolates sensor power from digital switching noise
+        - Improves magnetometer stability and ADC accuracy
+        - Meets design goal of "high-quality sensor data"
+        - Industry best practice for precision measurement systems
+
+  current_budget_strategy:
+    first_iteration: "Conservative load with >50% margin"
+    approach:
+      - "Minimal external peripherals for initial validation"
+      - "Focus on core MCU and sensor suite"
+      - "Establish baseline current consumption"
+      - "Verify thermal performance under typical load"
+      - "Leave expansion capacity for future iterations"
+
+    future_considerations:
+      - "Additional IMU for redundancy (BMI088)"
+      - "Additional magnetometer for comparison"
+      - "LED strips for visual feedback"
+      - "Companion computer interface"
+      - "Additional communication radios"
+
+# =============================================================================
+# TESTING AND VALIDATION
+# =============================================================================
+validation:
+  power_on_sequence:
+    - step: 1
+      test: "Verify 5V_SYS output with power module connected"
+      success_criteria: "4.9-5.1V with no load"
+
+    - step: 2
+      test: "Verify automatic switchover (remove power module, USB should take over)"
+      success_criteria: "Seamless transition, no brownout"
+
+    - step: 3
+      test: "Verify 3V3_DIG regulation under no load"
+      success_criteria: "3.25-3.35V with <50mV ripple"
+
+    - step: 4
+      test: "Load test 3V3_DIG (use resistive load)"
+      success_criteria: "Maintain regulation at 0.5A, 1.0A, 1.5A loads"
+
+    - step: 5
+      test: "Check ripple on 3V3_ANA rail (if implemented)"
+      success_criteria: "<1mV p-p, <10uV RMS noise"
+
+    - step: 6
+      test: "Verify VDD33_USB is powered"
+      success_criteria: "3.25-3.35V present"
+
+    - step: 7
+      test: "Thermal imaging under full load (1 hour)"
+      success_criteria: "All components <80C ambient, <100C with airflow"
+
+  battery_monitoring_validation:
+    voltage_sense:
+      - "Connect known voltage source to power module input"
+      - "Read BAT_VOLTAGE signal with ADC"
+      - "Calculate and verify scaling factor"
+      - "Test across battery voltage range (2S-4S)"
+
+    current_sense:
+      - "Apply known current load"
+      - "Read BAT_CURRENT signal with ADC"
+      - "Calculate and verify scaling factor"
+      - "Test linearity across current range (0-3A)"
+
+  ripple_and_noise_measurement:
+    equipment: "Oscilloscope with low-noise probe, 20MHz bandwidth limit"
+    measurement_points:
+      - "5V_SYS rail (near buck converter input)"
+      - "3V3_DIG rail (near STM32 VDD pins)"
+      - "3V3_ANA rail (near IMU/magnetometer supply)"
+      - "GND (verify ground plane noise)"
+
+    acceptance_criteria:
+      - "5V_SYS: <100mV p-p ripple"
+      - "3V3_DIG: <50mV p-p ripple"
+      - "3V3_ANA: <1mV p-p ripple, <10uV RMS noise"
+
+  efficiency_measurement:
+    test_conditions: "Typical operating load (~1A total)"
+    measurements:
+      - "Input power from Pixhawk power module"
+      - "Output power on all rails"
+      - "Calculate overall system efficiency"
+    target: ">70% system efficiency (5V input to 3.3V outputs)"
+
+# =============================================================================
+# KNOWN ISSUES AND FUTURE IMPROVEMENTS
+# =============================================================================
+known_issues:
+  schematic_completeness:
+    - issue: "3V3_ANA LDO not found in FC-power-section.kicad_sch"
+      impact: "Unclear how analog rail is generated"
+      priority: "HIGH"
+      resolution: "Verify implementation in other schematic sheets or add to design"
+
+    - issue: "VDD33_USB source not clearly defined"
+      impact: "May prevent STM32 operation if not implemented"
+      priority: "CRITICAL"
+      resolution: "Trace schematic or add dedicated 3.3V connection"
+
+    - issue: "Documentation mentions TPS54202DDC, schematic shows TPS62130RGTR"
+      impact: "Confusion, but not functional issue"
+      priority: "LOW"
+      resolution: "Update documentation to match actual hardware"
+
+future_improvements:
+  v1.1_considerations:
+    - "Add current sense resistor on 5V_SYS for onboard consumption monitoring"
+    - "Implement power sequencing with enable signals (staged startup)"
+    - "Add test points on all major power rails"
+    - "Consider reverse polarity protection on power module input"
+    - "Evaluate ferrite bead ratings for analog rail filtering"
+    - "Add LED indicators for each power rail (debug aid)"
+    - "Consider adding switchable power domains for peripherals"
+
+  v2.0_considerations:
+    - "Upgrade to higher-current connector if external loads increase"
+    - "Add hot-swap capability for power module replacement"
+    - "Implement I2C-based power monitoring IC (INA226)"
+    - "Add software-controlled power switches for peripherals"
+    - "Consider dual power module inputs for redundancy"
+    - "Evaluate switching to XT30/XT60 for higher current applications"
+
+# =============================================================================
+# REFERENCES AND RESOURCES
+# =============================================================================
+references:
+  schematics:
+    - "hardware/KiCad/FC_v1.0/FC-proto.kicad_sch"
+    - "hardware/KiCad/FC_v1.0/FC-power-section.kicad_sch"
+    - "hardware/KiCad/FC_v1.0/FC-interfaces_sch.kicad_sch"
+    - "hardware/KiCad/FC_v1.0/FC-Sensors.kicad_sch"
+
+  datasheets:
+    power_management:
+      - component: "TPS2113A"
+        path: "resources/datasheets/POWER/TPS2113A.pdf"
+        url: "https://www.ti.com/lit/gpn/tps2113a"
+        notes: "Ideal-diode power MUX"
+
+      - component: "TPS62130"
+        path: "resources/datasheets/POWER/TPS62130.pdf"
+        url: "https://www.ti.com/lit/gpn/tps62130"
+        notes: "3A synchronous buck converter"
+
+      - component: "TPS7A2033"
+        path: "resources/datasheets/POWER/TPS7A2033.pdf"
+        url: "https://www.ti.com/lit/gpn/tps7a2033"
+        notes: "Low-noise LDO (planned for 3V3_ANA)"
+
+    protection:
+      - component: "TSD05DYFR"
+        path: "resources/datasheets/ESD/TSD05DYFR.pdf"
+        notes: "USB ESD protection diode"
+
+    connector:
+      - component: "SM06B-GHS-TB"
+        manufacturer: "JST"
+        series: "GH"
+        notes: "6-pin Pixhawk power connector, 1A per contact"
+
+  documentation:
+    - "docs/hardware/power-architecture.md"
+    - "docs/hardware/overview.md"
+    - "docs/hardware/design-decisions.md"
+
+  external_standards:
+    - standard: "Pixhawk Connector Standard"
+      url: "https://docs.px4.io/main/en/assembly/pixhawk_connector_standard.html"
+      notes: "Defines power module pinout and electrical specifications"
+
+    - standard: "Pixhawk Hardware v3.x Standard"
+      url: "https://pixhawk.org/"
+      notes: "Reference architecture for flight controller power systems"
+
+# =============================================================================
+# DOCUMENT REVISION HISTORY
+# =============================================================================
+revision_history:
+  - version: "1.0"
+    date: "2025-11-24"
+    author: "Claude Code"
+    changes: "Initial power.yaml generation from KiCad schematics"
+
+  - version: "1.1"
+    date: "2025-11-24"
+    author: "Claude Code"
+    changes: "Added Pixhawk power module compatibility documentation"
+    notes: "Updated based on user confirmation of Pixhawk power module usage"
