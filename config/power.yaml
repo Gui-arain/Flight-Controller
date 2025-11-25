@@ -336,20 +336,51 @@ power_management:
       flight controller designs. Power Good output can be used for sequencing
       or fault detection in future revisions.
 
-  # Note: Analog LDO for 3V3_ANA rail
-  analog_ldo:
-    reference: "TBD"
-    part_number: "TPS7A2033 (or similar low-noise LDO)"
-    status: "Not found in current FC-power-section.kicad_sch"
-    planned_implementation:
-      input: "5V_SYS or 3V3_DIG"
-      output: "3V3_ANA (300mA)"
-      purpose: "Ultra-clean power for IMU, magnetometer, and VDDA"
-      features: "Low noise, high PSRR, soft-start"
+  # Analog Power Filter for 3V3_ANA rail
+  analog_power_filter:
+    reference: "FB1"
+    part_number: "Ferrite Bead (TBD - exact part number)"
+    function: "LC Filter for Analog Power Rail"
+
+    implementation:
+      input: "3V3_DIG"
+      output: "3V3_ANA"
+      topology: "Ferrite bead + capacitive filtering"
+
+    components:
+      ferrite_bead:
+        ref: "FB1"
+        function: "Series impedance for noise isolation"
+        typical_impedance: "100-600 ohm @ 100MHz"
+        dc_resistance: "<100 mohm (minimize voltage drop)"
+        current_rating: ">300mA"
+
+      input_capacitor:
+        ref: "C14"
+        value: "100nF"
+        type: "Ceramic X7R"
+        function: "High-frequency noise filtering"
+
+      output_capacitor:
+        ref: "C15"
+        value: "1uF"
+        type: "Ceramic X7R"
+        function: "Bulk capacitance and low-frequency filtering"
+
+      test_point:
+        ref: "TP1"
+        function: "Analog power monitoring and debug"
+
+    characteristics:
+      voltage_drop: "<10mV @ 50mA (ferrite bead DCR)"
+      noise_attenuation: ">20dB @ 1MHz and above"
+      cutoff_frequency: "~100kHz (ferrite bead + C15 form low-pass)"
+
     notes: |
-      Documentation mentions this LDO for 3V3_ANA rail generation.
-      May be present in other schematic sheets or planned for future revision.
-      Critical for high-performance sensor operation and ADC accuracy.
+      Simple, effective filtering approach using ferrite bead instead of LDO.
+      Provides good high-frequency noise isolation from 3V3_DIG switching noise.
+      Minimal voltage drop compared to LDO approach.
+      Cost-effective solution for first revision validation.
 
 # =============================================================================
 # POWER RAILS
@@ -440,15 +471,16 @@ power_rails:
   rail_3v3_ana:
     name: "3V3_ANA"
     voltage: 3.3
-    tolerance: "+/- 1%"
-    voltage_range: "3.267-3.333V"
-    max_current: 0.3  # Amperes (300 mA, typical LDO rating)
+    tolerance: "+/- 3%"
+    voltage_range: "3.20-3.40V"
+    max_current: 0.3  # Amperes (300 mA, limited by ferrite bead rating)
     typical_current: "0.02-0.05A (first iteration sensors)"
 
     source:
-      component: "TBD"
-      part: "TPS7A2033 or equivalent low-noise LDO"
-      status: "Not confirmed in current schematic"
+      component: "FB1"
+      type: "Ferrite Bead Filter"
+      input: "3V3_DIG"
+      topology: "LC passive filter (ferrite bead + capacitors)"
 
     loads:
       - description: "ICM-42688-P (Primary IMU)"
@@ -471,21 +503,25 @@ power_rails:
         current: "~100mA available"
 
     characteristics:
-      noise: "<10uV RMS (for sensor accuracy)"
-      psrr: ">70dB @ 1kHz (rejects upstream noise)"
-      ripple: "<1mV p-p (critical for ADC reference)"
-      transient_response: "Slower than buck (LDO characteristic)"
+      voltage_drop: "<10mV @ 50mA typical load (ferrite bead DCR)"
+      noise_attenuation: ">20dB @ 1MHz (ferrite bead + capacitors)"
+      cutoff_frequency: "~100kHz (LC filter characteristic)"
+      ripple: "<10mV p-p (filtered from 3V3_DIG)"
+      transient_response: "Fast (no active regulation, capacitor-based)"
 
     filtering:
-      input_isolation: "Ferrite beads from 3V3_DIG or 5V_SYS"
-      decoupling: "Multiple ceramic capacitors per sensor"
-      bulk: "Low-ESR tantalum or ceramic"
+      series_element: "FB1 ferrite bead (100-600 ohm @ 100MHz)"
+      input_capacitor: "C14 (100nF ceramic X7R)"
+      output_capacitor: "C15 (1uF ceramic X7R)"
+      additional: "Per-sensor decoupling capacitors"
 
     notes: |
       Clean analog power for sensors and STM32H743 VDDA pin.
-      LDO implementation (not buck) ensures ultra-low noise for IMU and magnetometer.
+      Ferrite bead filter provides high-frequency noise isolation from 3V3_DIG.
+      Simple, passive filtering approach - no active regulation.
+      Minimal voltage drop compared to LDO (<10mV vs ~100-200mV).
+      Adequate noise performance for ICM-42688-P and MMC5983MA sensors.
       Critical for high-precision inertial measurements and ADC accuracy.
-      Implementation status unclear - may be in different schematic sheet.
 
   # USB 3.3V Rail
   rail_vdd33_usb:
@@ -547,7 +583,7 @@ power_distribution:
                                                    |        +-- Digital peripherals
                                                    |        +-- Communication interfaces
                                                    |        +-- SD card
-                                                   |        +-- (Input to analog LDO)
+                                                   |        +-- Ferrite Bead Filter (FB1)
                                                    |                |
                                                    |                v
                                                    |           3V3_ANA Rail (300mA max)
@@ -600,10 +636,16 @@ special_requirements:
 
   analog_power:
     requirement: "Clean, low-noise 3.3V for precision sensors"
-    implementation: "Separate 3V3_ANA rail via LDO (not buck converter)"
-    target_noise: "<10uV RMS"
-    target_psrr: ">70dB @ 1kHz"
-    filtering: "Ferrite beads, decoupling capacitors, separate ground plane"
+    implementation: "Separate 3V3_ANA rail via ferrite bead filter (passive LC filtering)"
+    target_noise_attenuation: ">20dB @ 1MHz and above"
+    voltage_drop: "<10mV @ 50mA typical load"
+    filtering: "Ferrite bead (FB1), input/output capacitors (C14/C15), per-sensor decoupling"
+
+    filter_components:
+      - "FB1: Ferrite bead (100-600 ohm @ 100MHz)"
+      - "C14: 100nF ceramic input capacitor"
+      - "C15: 1uF ceramic output capacitor"
+      - "TP1: Test point for monitoring"
 
     affected_components:
       - "ICM-42688-P: Gyro noise 2.8 mdps/√Hz requires clean power"
@@ -613,6 +655,8 @@ special_requirements:
     notes: |
       Sensor selection (ICM-42688-P, MMC5983MA) was based on low noise characteristics.
       Power supply noise can degrade sensor performance and negate sensor advantages.
+      Ferrite bead filter provides adequate noise isolation with minimal voltage drop.
+      Simple passive approach suitable for first revision validation.
       GPS module receives 3.3V through ferrite bead for additional isolation.
 
   power_sequencing:
@@ -630,9 +674,9 @@ special_requirements:
 
       - step: 3
         rail: "3V3_ANA"
-        notes: "Analog LDO output for clean sensor power"
-        timing: "t=~15ms (soft-start)"
-        dependency: "Requires 3V3_DIG or 5V_SYS stable"
+        notes: "Passive ferrite bead filter output for clean sensor power"
+        timing: "t=~10ms (follows 3V3_DIG with RC time constant)"
+        dependency: "Requires 3V3_DIG stable"
 
       - step: 4
         rail: "VDD33_USB"
@@ -724,13 +768,15 @@ design_philosophy:
         - Well-characterized component with good availability
 
     separate_analog_rail:
-      decision: "Dedicated 3V3_ANA LDO for sensors (planned)"
+      decision: "Dedicated 3V3_ANA ferrite bead filter for sensors"
       rationale: |
-        - Ultra-low noise critical for ICM-42688-P gyro performance
-        - Isolates sensor power from digital switching noise
+        - Provides noise isolation for ICM-42688-P gyro performance
+        - Isolates sensor power from digital switching noise (>20dB @ 1MHz)
         - Improves magnetometer stability and ADC accuracy
         - Meets design goal of "high-quality sensor data"
-        - Industry best practice for precision measurement systems
+        - Simple passive approach with minimal voltage drop (<10mV)
+        - Cost-effective and reliable (no active regulation to fail)
+        - Adequate performance for first revision validation
 
   current_budget_strategy:
     first_iteration: "Conservative load with >50% margin"
@@ -820,11 +866,6 @@ validation:
 # =============================================================================
 known_issues:
   schematic_completeness:
-    - issue: "3V3_ANA LDO not found in FC-power-section.kicad_sch"
-      impact: "Unclear how analog rail is generated"
-      priority: "HIGH"
-      resolution: "Verify implementation in other schematic sheets or add to design"
-
     - issue: "VDD33_USB source not clearly defined"
       impact: "May prevent STM32 operation if not implemented"
       priority: "CRITICAL"
@@ -874,11 +915,6 @@ references:
         path: "resources/datasheets/POWER/TPS62130.pdf"
         url: "https://www.ti.com/lit/gpn/tps62130"
         notes: "3A synchronous buck converter"
-
-      - component: "TPS7A2033"
-        path: "resources/datasheets/POWER/TPS7A2033.pdf"
-        url: "https://www.ti.com/lit/gpn/tps7a2033"
-        notes: "Low-noise LDO (planned for 3V3_ANA)"
 
     protection:
       - component: "TSD05DYFR"

@@ -62,11 +62,11 @@ Pixhawk Power Module (2-3A @ 5V from LiPo battery)
                                                +-- STM32H743 VDD
                                                +-- Communication interfaces
                                                +-- SD card
-                                               +-- Input to analog LDO
+                                               +-- Ferrite Bead Filter (FB1)
                                                         |
                                                         v
                                                    3V3_ANA (300mA max)
-                                                   Ultra-clean sensor power
+                                                   Filtered sensor power
                                                         |
                                                         +-- ICM-42688-P (IMU)
                                                         +-- MMC5983MA (Magnetometer)
@@ -140,10 +140,10 @@ USB_VBUS (0.5-2A, development fallback)
 - **Filtering:** 32µF bulk + 100nF ceramic + 3.3nF additional
 
 #### 3V3_ANA (Analog Sensor Power)
-- **Voltage:** 3.3V (3.267-3.333V, ±1%)
-- **Max Current:** 300mA (LDO rating)
+- **Voltage:** 3.3V (3.20-3.40V, ±3%)
+- **Max Current:** 300mA (ferrite bead rating)
 - **Typical Current:** 20-50mA (first iteration sensors)
-- **Source:** Low-noise LDO from 3V3_DIG or 5V_SYS
+- **Source:** Ferrite bead filter (FB1) from 3V3_DIG
 - **Loads:**
   - ICM-42688-P IMU (~1mA)
   - MMC5983MA magnetometer (~3mA)
@@ -151,11 +151,16 @@ USB_VBUS (0.5-2A, development fallback)
   - STM32H743 VDDA pin (~10mA)
   - GPS module (~50-150mA, via ferrite bead)
 - **Characteristics:**
-  - <10µV RMS noise (critical for sensor accuracy)
-  - >70dB PSRR @ 1kHz
-  - <1mV p-p ripple
-- **Purpose:** Ultra-clean power for precision measurements
-- **Implementation Status:** LDO not confirmed in current schematic (TBD)
+  - >20dB noise attenuation @ 1MHz and above
+  - <10mV voltage drop @ 50mA typical load
+  - <10mV p-p ripple (filtered from 3V3_DIG)
+  - Passive LC filter topology
+- **Filter Components:**
+  - FB1: Ferrite bead (100-600 ohm @ 100MHz)
+  - C14: 100nF input capacitor
+  - C15: 1uF output capacitor
+  - TP1: Test point
+- **Purpose:** Filtered power for precision sensor measurements
 
 #### VDD33_USB (USB PHY Power)
 - **Voltage:** 3.3V (±3%)
@@ -268,23 +273,24 @@ Power Module → EXT_5V → Splits to:
 
 **Trade-off:** Buck converter introduces switching noise vs. linear regulator's clean output
 
-**Mitigation:** Separate 3V3_ANA LDO rail for noise-sensitive sensors
+**Mitigation:** Separate 3V3_ANA ferrite bead filter rail for noise-sensitive sensors
 
 ### 5. Separate Analog Power Rail
 
-**Decision:** Dedicated 3V3_ANA rail via low-noise LDO for sensors
+**Decision:** Dedicated 3V3_ANA rail via ferrite bead filter for sensors
 
 **Rationale:**
-- **Sensor performance:** ICM-42688-P gyro noise specification (2.8 mdps/√Hz) requires ultra-clean power
+- **Sensor performance:** ICM-42688-P gyro noise specification (2.8 mdps/√Hz) requires clean power
 - **ADC accuracy:** STM32H743 VDDA pin needs stable reference for battery monitoring
-- **Magnetometer stability:** MMC5983MA 18-bit resolution benefits from low-noise supply
-- **Noise isolation:** LDO filters buck converter switching noise
-- **Industry best practice:** Standard approach for precision measurement systems
+- **Magnetometer stability:** MMC5983MA 18-bit resolution benefits from filtered supply
+- **Noise isolation:** Ferrite bead filters buck converter switching noise (>20dB @ 1MHz)
+- **Simple passive approach:** No active regulation, minimal voltage drop (<10mV)
+- **Cost-effective:** Fewer components than LDO approach, high reliability
 
 **Target Specifications:**
-- Noise: <10µV RMS
-- PSRR: >70dB @ 1kHz
-- Ripple: <1mV p-p
+- Noise attenuation: >20dB @ 1MHz and above
+- Voltage drop: <10mV @ 50mA
+- Ripple: <10mV p-p
 
 ---
 
@@ -497,14 +503,12 @@ Both voltage and current scaling factors are power module specific and must be c
 - ✅ ESD protection on USB (TSD05DYFR)
 
 **Unclear / TBD:**
-- ⚠️ 3V3_ANA LDO implementation (not found in FC-power-section.kicad_sch)
 - ⚠️ VDD33_USB source and filtering (not clearly defined)
 - ⚠️ External peripheral connector details (GPS, telemetry)
 
 ### v1.1 Improvements
 
 **Priority: HIGH**
-- Verify and document 3V3_ANA LDO implementation
 - Confirm VDD33_USB connection to 3V3_DIG
 - Add test points on all major power rails for debug visibility
 
@@ -548,7 +552,6 @@ Both voltage and current scaling factors are power module specific and must be c
 ### Datasheets
 - TPS2113A: `resources/datasheets/POWER/TPS2113A.pdf`
 - TPS62130: `resources/datasheets/POWER/TPS62130.pdf`
-- TPS7A2033: `resources/datasheets/POWER/TPS7A2033.pdf` (planned LDO)
 - TSD05DYFR: `resources/datasheets/ESD/TSD05DYFR.pdf` (USB ESD protection)
 
 ### External Standards

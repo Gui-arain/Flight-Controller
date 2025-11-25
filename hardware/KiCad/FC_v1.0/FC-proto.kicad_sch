@@ -6606,6 +6606,16 @@
 	)
 	(wire
 		(pts
+			(xy 166.37 105.41) (xy 172.72 105.41)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1781bffc-eb31-4348-8465-934352a9f5e3")
+	)
+	(wire
+		(pts
 			(xy 238.76 87.63) (xy 243.84 87.63)
 		)
 		(stroke
@@ -7316,16 +7326,6 @@
 	)
 	(wire
 		(pts
-			(xy 238.76 212.09) (xy 243.84 212.09)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6e785ea4-2735-41b9-a0b6-0d59be53cff1")
-	)
-	(wire
-		(pts
 			(xy 69.85 146.05) (xy 69.85 147.32)
 		)
 		(stroke
@@ -7373,6 +7373,16 @@
 			(type default)
 		)
 		(uuid "76f28b6f-9c8c-4966-bd70-1b3232ee8afd")
+	)
+	(wire
+		(pts
+			(xy 238.76 69.85) (xy 243.84 69.85)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7750f79d-18eb-4f5f-888a-763600bba543")
 	)
 	(wire
 		(pts
@@ -7473,6 +7483,16 @@
 			(type default)
 		)
 		(uuid "8b41876f-c5eb-4c4a-9e1d-46a011391129")
+	)
+	(wire
+		(pts
+			(xy 166.37 163.83) (xy 172.72 163.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c49b7b2-5739-46e1-bf2e-3948d3bec78b")
 	)
 	(wire
 		(pts
@@ -7653,6 +7673,16 @@
 			(type default)
 		)
 		(uuid "ab83c00f-3cd5-40cb-898d-cdb5f4cc66f5")
+	)
+	(wire
+		(pts
+			(xy 166.37 161.29) (xy 172.72 161.29)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ad52d7e9-da52-4663-802a-a1b9aef4c275")
 	)
 	(wire
 		(pts
@@ -7986,16 +8016,6 @@
 	)
 	(wire
 		(pts
-			(xy 238.76 69.85) (xy 243.84 69.85)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e61c57a4-cc40-4d98-adfd-94fb1c959916")
-	)
-	(wire
-		(pts
 			(xy 238.76 105.41) (xy 245.11 105.41)
 		)
 		(stroke
@@ -8083,6 +8103,16 @@
 			(type default)
 		)
 		(uuid "f250e677-6222-49fa-bf8c-522f7f41081a")
+	)
+	(wire
+		(pts
+			(xy 166.37 153.67) (xy 172.72 153.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f34cbbba-f0d3-4726-980b-5057d65d24cb")
 	)
 	(wire
 		(pts
@@ -8386,6 +8416,28 @@
 			)
 		)
 	)
+	(global_label "I2C2_SCL"
+		(shape output)
+		(at 166.37 161.29 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "2472eca0-2ccd-48e9-893a-4548081dae56")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 154.6158 161.29 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "VREF+_MCU"
 		(shape input)
 		(at 93.98 96.52 0)
@@ -8432,7 +8484,7 @@
 	)
 	(global_label "BAT_CURRENT"
 		(shape input)
-		(at 267.97 74.93 0)
+		(at 243.84 69.85 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -8442,7 +8494,7 @@
 		)
 		(uuid "32c1aee8-3864-4e82-9604-ea13f1f88c1a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 283.8366 74.93 0)
+			(at 259.7066 69.85 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8470,6 +8522,28 @@
 					(size 1.27 1.27)
 				)
 				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "I2C2_SDA"
+		(shape input)
+		(at 166.37 163.83 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "35224fa6-cd13-4abb-8635-4c3d93766a49")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 154.5553 163.83 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -8509,6 +8583,28 @@
 		(uuid "3fed02b1-56e4-4f66-a347-7d15739ae5e0")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 112.8704 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "SWITCH"
+		(shape input)
+		(at 271.78 73.66 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "41351c4b-8301-40aa-a541-2aa3cd9fd216")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 281.599 73.66 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8619,6 +8715,28 @@
 		(uuid "759da29c-173b-4a73-b596-a76dd67fbd4a")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 255.7757 72.39 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "BUZZ"
+		(shape output)
+		(at 273.05 78.74 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "7c2df5cb-86c3-4a23-8dee-ad4c9fc3b502")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 281.0547 78.74 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9114,22 +9232,22 @@
 	)
 	(global_label "IMU_MISO"
 		(shape input)
-		(at 243.84 69.85 0)
+		(at 166.37 105.41 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "e96d5108-25fd-45e6-90f4-0aa6e09ceebe")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 255.7757 69.85 0)
+			(at 154.4343 105.41 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -9180,22 +9298,22 @@
 	)
 	(global_label "BAT_VOLTAGE"
 		(shape input)
-		(at 267.97 77.47 0)
+		(at 166.37 153.67 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "ee32323a-35a6-4fc5-9038-af7db2763b7c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 283.1714 77.47 0)
+			(at 151.1686 153.67 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 				(hide yes)
 			)
 		)

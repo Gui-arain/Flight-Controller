@@ -49,8 +49,8 @@ This is a custom flight controller hardware design project centered around the S
 ### Power Architecture
 The power system uses a hierarchical rail structure:
 - **5V_SYS**: 2.5A (via TPS2113A ideal-diode MUX with priority: EXT_5V > USB)
-- **3V3_DIG**: 2A (buck regulator TPS54202DDC for digital logic)
-- **3V3_ANA**: 300 mA (LDO TPS7A2033 for analog/sensor clean power)
+- **3V3_DIG**: 2A (buck regulator TPS62130RGTR for digital logic)
+- **3V3_ANA**: 300 mA (ferrite bead filter from 3V3_DIG for analog/sensor clean power)
 
 Critical note: VDD33_USB must be supplied 3.3V even if USB is not actively used.
 
@@ -79,7 +79,7 @@ Critical note: VDD33_USB must be supplied 3.3V even if USB is not actively used.
   - Sensor subsystem
 - Custom footprints in `hardware/cad-layout/` for components like:
   - STM32H743ZIT6, ICM-42688-P, MMC5983MA
-  - Power ICs (TPS2113A, TPS62130RGTR, TPS54202DDC)
+  - Power ICs (TPS2113A, TPS62130RGTR)
   - Connectors (SM03B-GHS-TB, FTSH-105-01-F-DV-K)
 
 ### Firmware Configuration
