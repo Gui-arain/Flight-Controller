@@ -1,4 +1,4 @@
-27283743511007464
+27285559771191011
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -62328,18 +62328,25 @@ TPS7A2133PQWDRBRQ1
 13
 9
 FC-FootprintLib
-TPS2113A
+TPS2113ADRBR
 
-TPS2113ADRBR 
+
 0
-15
+13
 9
 FC-FootprintLib
 TPS62130ARGTR
 
 TPS62130RGTR 
 0
-21
+22
+17
+FC-FootprintLib
+TPS62130ARGTR-VIP.3
+
+TPS62130RGTR 
+0
+22
 17
 FC-FootprintLib
 TSX-3225_16MHz

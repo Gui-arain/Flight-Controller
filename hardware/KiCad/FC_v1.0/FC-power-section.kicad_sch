@@ -6003,8 +6003,8 @@
 					)
 				)
 			)
-			(property "Footprint" "FC-FootprintLib:TPS2113A"
-				(at 43.942 -8.636 0)
+			(property "Footprint" "FC-FootprintLib:TPS2113ADRBR"
+				(at 46.482 -8.636 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -6057,8 +6057,8 @@
 					(hide yes)
 				)
 			)
-			(property "Supplier Link 2" "https://jlcpcb.com/parts/componentSearch?searchTxt=TPS2113ADRBR"
-				(at 65.786 -16.256 0)
+			(property "Supplier Link 2" "https://jlcpcb.com/partdetail/TexasInstruments-TPS2113ADRBR/C354512"
+				(at 67.564 -16.256 0)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -95308,7 +95308,7 @@
 				)
 			)
 		)
-		(property "Footprint" "FC-FootprintLib:TPS2113A"
+		(property "Footprint" "FC-FootprintLib:TPS2113ADRBR"
 			(at 166.37 92.71 0)
 			(effects
 				(font
@@ -95362,7 +95362,7 @@
 				(hide yes)
 			)
 		)
-		(property "Supplier Link 2" "https://jlcpcb.com/parts/componentSearch?searchTxt=TPS2113ADRBR"
+		(property "Supplier Link 2" "https://jlcpcb.com/partdetail/TexasInstruments-TPS2113ADRBR/C354512"
 			(at 232.156 106.68 0)
 			(effects
 				(font

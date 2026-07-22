@@ -13,9 +13,11 @@ This file present the different versions of the board that have been designed. I
 - *[Schematic not exported]*
 - Manufactured : produced 
 - Tested : ***In testing...***
-    - ✅ Elec checks
     - ✅ STM32 checks
-    - 🔄 Sensors
+    - ✅ IMU
+    - ✅ MAG
+    -  ❌ BAR
+    - ❔PWR checks
 
 ## Past versions:
 - v0.9:
