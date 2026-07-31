@@ -42,6 +42,8 @@ In this document we reffer to each board produced as board A, B and C.
 
 ### MUX checks
 
+#### First checks
+
 Visual inspection (Microscope):
 - No apparent damages on the IC and nearby passives
 - Looks properly soldered
@@ -72,16 +74,22 @@ Output voltage monitoring (osciloscope trigger) when IN2 is powered up:
 - The MUX on Board A seems to have the same behavior
 - These electrical tests have been conducted without load (power stage only)*
 
+#### New checks
+
+We supply 5V through the 5VSYS power rail to bypass the MUX for boards A abd C.
+
+=> The buck coonverter works properly but the LDO is shorted and smokes.
+
+It appears the LDO and MUX have been interchanged on boards A and C, thus causing all these issues.
+We noticed it thanks to the ICs top marking: `A2133P` for the LDO and `PTOI` for the MUX.
+
+![U2_wrong](imgs/board_testing/U2_wrong_placement.png)
+![U4_wrong](imgs/board_testing/U4_wrong_placement.png)
+
 ### Conclusion
 
-We still don't know what caused the MUX A and C to fail and B to work. Here are the hypotheses we have aproximatly ordered from the most likely:
-- Bad soldering of the IC bottom pad caused by too many vias
-- Damages done the the IC during operations (overheating when soldering, board edges removal)
-- The power supplied used showed to be faulty when conducting recent tests on board C (2V Pk-Pk, 160Hz instead of 5V DC) -> could have damaged the MUX of board C (can't explain board A)
-- Unreliable MUX implementation -> might work or not depending on other factors (we know some capacitors might be undersized)
-- Damaged or faulty components from the start
-
-Unfortunaly, no satisfactory explanation has been identified yet.
+We now know the power issues we had on board A and C are not due to a design fault but to an assembly mistake by our PCBA manufacturer. The LDO and MUX ICs (U4 and U2)
+have indeed been interchanged.
 
 ## Sensor section
 ## References

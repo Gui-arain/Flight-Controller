@@ -10,14 +10,14 @@ This file present the different versions of the board that have been designed. I
 - name : ***Shirley***
 - descriptive name : **FC Dev Board**
 - version number: **0.9.5**
-- *[Schematic not exported]*
+- [Schematic exported](FC-Dev-Board-v0.9.5-Schem.pdf/FC-Dev-Board-v0.9.5-Schem.pdf)
 - Manufactured : produced 
 - Tested : ***In testing...***
     - ✅ STM32 checks
     - ✅ IMU
     - ✅ MAG
     -  ❌ BAR
-    - ❔PWR checks
+    - ✅ PWR checks
 
 ## Past versions:
 - v0.9:
